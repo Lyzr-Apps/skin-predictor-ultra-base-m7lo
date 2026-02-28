@@ -97,6 +97,50 @@ export default function UploadSection({
     if (inputRef.current) inputRef.current.value = ''
   }, [])
 
+  /**
+   * Deep-search for the prediction object through all nesting levels.
+   * The agent response can be wrapped in multiple layers by the API route
+   * and parseLLMJson, so we need to search exhaustively.
+   */
+  const extractAnalysisData = useCallback((raw: any): { prediction: any; condition_details: any; disclaimer: string } | null => {
+    if (!raw || typeof raw !== 'object') {
+      // raw might be a JSON string
+      if (typeof raw === 'string') {
+        try {
+          return extractAnalysisData(JSON.parse(raw))
+        } catch {
+          return null
+        }
+      }
+      return null
+    }
+
+    // Direct match: object has prediction at this level
+    if (raw.prediction && typeof raw.prediction === 'object' && raw.prediction.condition_name) {
+      return {
+        prediction: raw.prediction,
+        condition_details: raw.condition_details || {},
+        disclaimer: raw.disclaimer || '',
+      }
+    }
+
+    // Check nested keys commonly used by normalizeResponse and parseLLMJson
+    const searchKeys = ['result', 'response', 'data', 'output', 'content', 'text', 'message']
+    for (const key of searchKeys) {
+      if (raw[key]) {
+        let val = raw[key]
+        // If the value is a string, try to parse it as JSON
+        if (typeof val === 'string') {
+          try { val = JSON.parse(val) } catch { continue }
+        }
+        const found = extractAnalysisData(val)
+        if (found) return found
+      }
+    }
+
+    return null
+  }, [])
+
   const handleAnalyze = useCallback(async () => {
     if (!file) return
     setError('')
@@ -126,11 +170,32 @@ export default function UploadSection({
         return
       }
 
-      const parsed = parseLLMJson(result?.response?.result)
-      const prediction = parsed?.prediction ?? {}
+      // Try multiple extraction strategies to find the prediction data
+      // Strategy 1: Parse result.response.result with parseLLMJson
+      let analysisData = extractAnalysisData(parseLLMJson(result?.response?.result))
+
+      // Strategy 2: Try result.response directly
+      if (!analysisData) {
+        analysisData = extractAnalysisData(result?.response)
+      }
+
+      // Strategy 3: Try the raw_response string
+      if (!analysisData && result?.raw_response) {
+        const rawParsed = parseLLMJson(result.raw_response)
+        analysisData = extractAnalysisData(rawParsed)
+      }
+
+      // Strategy 4: Try the entire result object
+      if (!analysisData) {
+        analysisData = extractAnalysisData(result)
+      }
+
+      const prediction = analysisData?.prediction ?? {}
       const conditionName = prediction?.condition_name ?? 'Unknown Condition'
       const confidenceScore = typeof prediction?.confidence_score === 'number' ? prediction.confidence_score : 0
       const urgencyLevel = prediction?.urgency_level ?? 'Low'
+
+      const fullResult = analysisData ?? parseLLMJson(result?.response?.result) ?? {}
 
       const analysisResult: AnalysisResult = {
         id: Date.now().toString(),
@@ -139,7 +204,7 @@ export default function UploadSection({
         confidenceScore,
         urgencyLevel,
         imageDataUrl: preview,
-        fullResult: parsed,
+        fullResult,
       }
 
       onAnalysisComplete(analysisResult)
@@ -149,7 +214,7 @@ export default function UploadSection({
       setIsAnalyzing(false)
       setActiveAgentId(null)
     }
-  }, [file, preview, onAnalysisComplete, setIsAnalyzing, setActiveAgentId])
+  }, [file, preview, onAnalysisComplete, setIsAnalyzing, setActiveAgentId, extractAnalysisData])
 
   return (
     <Card className="backdrop-blur-[16px] bg-white/75 border border-white/[0.18] shadow-md">

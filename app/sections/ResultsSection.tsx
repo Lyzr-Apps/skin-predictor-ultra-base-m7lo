@@ -83,6 +83,43 @@ function formatInline(text: string) {
   )
 }
 
+/**
+ * Deep-search for the prediction data through all nesting levels.
+ * Handles cases where fullResult may have data nested under result/response/data keys.
+ */
+function findAnalysisData(obj: any, depth: number = 0): { prediction: any; condition_details: any; disclaimer: string } | null {
+  if (depth > 6 || !obj) return null
+
+  if (typeof obj === 'string') {
+    try { return findAnalysisData(JSON.parse(obj), depth + 1) } catch { return null }
+  }
+
+  if (typeof obj !== 'object') return null
+
+  // Direct match: has prediction with condition_name
+  if (obj.prediction && typeof obj.prediction === 'object' && obj.prediction.condition_name) {
+    return {
+      prediction: obj.prediction,
+      condition_details: obj.condition_details || {},
+      disclaimer: typeof obj.disclaimer === 'string' ? obj.disclaimer : '',
+    }
+  }
+
+  // Search nested keys
+  for (const key of ['result', 'response', 'data', 'output', 'content', 'text', 'message']) {
+    if (obj[key]) {
+      let val = obj[key]
+      if (typeof val === 'string') {
+        try { val = JSON.parse(val) } catch { continue }
+      }
+      const found = findAnalysisData(val, depth + 1)
+      if (found) return found
+    }
+  }
+
+  return null
+}
+
 export default function ResultsSection({ result, onNewAnalysis }: ResultsSectionProps) {
   if (!result) {
     return (
@@ -102,18 +139,21 @@ export default function ResultsSection({ result, onNewAnalysis }: ResultsSection
     )
   }
 
-  const prediction = result?.fullResult?.prediction ?? {}
+  // Use deep search to find prediction data regardless of nesting
+  const analysisData = findAnalysisData(result?.fullResult) || findAnalysisData(result)
+
+  const prediction = analysisData?.prediction ?? result?.fullResult?.prediction ?? {}
   const conditionName = prediction?.condition_name ?? result?.conditionName ?? 'Unknown Condition'
   const confidenceScore = typeof prediction?.confidence_score === 'number' ? prediction.confidence_score : (result?.confidenceScore ?? 0)
   const urgencyLevel = prediction?.urgency_level ?? result?.urgencyLevel ?? 'Low'
 
-  const details = result?.fullResult?.condition_details ?? {}
+  const details = analysisData?.condition_details ?? result?.fullResult?.condition_details ?? {}
   const description = details?.description ?? ''
   const symptoms = Array.isArray(details?.symptoms) ? details.symptoms : []
   const causes = Array.isArray(details?.possible_causes) ? details.possible_causes : []
   const treatments = Array.isArray(details?.treatment_options) ? details.treatment_options : []
   const whenToSeeDoctor = details?.when_to_see_doctor ?? ''
-  const disclaimer = result?.fullResult?.disclaimer ?? 'This is for informational purposes only. Consult a healthcare professional.'
+  const disclaimer = analysisData?.disclaimer || result?.fullResult?.disclaimer || 'This is for informational purposes only. Consult a healthcare professional.'
 
   return (
     <div className="space-y-5">
