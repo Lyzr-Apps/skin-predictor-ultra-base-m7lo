@@ -1,0 +1,22 @@
+{
+  "agent_name": "Skin Analysis Agent",
+  "agent_id": "69a2937542fb78f6798a6c12",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "prediction": {
+      "condition_name": "string",
+      "confidence_score": "number",
+      "urgency_level": "string (Low|Moderate|High|Urgent)"
+    },
+    "condition_details": {
+      "description": "string",
+      "symptoms": "string[]",
+      "possible_causes": "string[]",
+      "treatment_options": "string[]",
+      "when_to_see_doctor": "string"
+    },
+    "disclaimer": "string"
+  }
+}

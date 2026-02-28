@@ -1,0 +1,58 @@
+{
+  "agent_name": "Skin Analysis Agent",
+  "agent_id": "69a2937542fb78f6798a6c12",
+  "description": "Analyzes uploaded skin images to predict potential skin diseases. Returns disease name, confidence percentage, condition details (symptoms, causes, treatments), urgency level, and medical disclaimer. Uses vision capabilities to inspect the image and structured medical knowledge to provide comprehensive results.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "prediction": {
+      "condition_name": "string",
+      "confidence_score": "number",
+      "urgency_level": "string"
+    },
+    "condition_details": {
+      "description": "string",
+      "symptoms": [
+        "string"
+      ],
+      "possible_causes": [
+        "string"
+      ],
+      "treatment_options": [
+        "string"
+      ],
+      "when_to_see_doctor": "string"
+    },
+    "disclaimer": "string"
+  },
+  "example_response": {
+    "prediction": {
+      "condition_name": "Name of the predicted skin condition",
+      "confidence_score": 0,
+      "urgency_level": "Urgency level of the condition"
+    },
+    "condition_details": {
+      "description": "Brief description of the condition",
+      "symptoms": [
+        "sample string"
+      ],
+      "possible_causes": [
+        "sample string"
+      ],
+      "treatment_options": [
+        "sample string"
+      ],
+      "when_to_see_doctor": "Guidance on when to seek medical attention"
+    },
+    "disclaimer": "Medical disclaimer text"
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/image.png"
+      }
+    ]
+  }
+}

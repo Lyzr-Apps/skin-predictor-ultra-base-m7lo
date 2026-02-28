@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "User Image Upload",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "skin_analysis_agent",
+      "type": "Agent",
+      "label": "Skin Analysis Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "output_node",
+      "type": "Output",
+      "label": "Analysis Results",
+      "nodeCategory": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "input_node",
+      "target": "skin_analysis_agent"
+    },
+    {
+      "source": "skin_analysis_agent",
+      "target": "output_node"
+    }
+  ]
+}
